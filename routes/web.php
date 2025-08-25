@@ -28,6 +28,10 @@ Route::get('/schedule', function () {
     return view('schedule');
 })->middleware(['auth'])->name('schedule');
 
+Route::get('/task', function () {
+    return view('task');
+})->middleware(['auth'])->name('task');
+
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');

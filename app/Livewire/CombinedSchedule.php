@@ -14,32 +14,37 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use App\Notifications\ScheduleExchangeNotification;
 use App\Notifications\SickBackupNotification;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class CombinedSchedule extends Component
 {
     use WithPagination;
 
-    // Properti State
     public $targetItemId;
     public $swapScheduleId;
     public $sickScheduleId;
     public $sickReason = '';
-    public $exchangeIdToApprove;
-
-    // Properti Modal
+    
     public $showSwapModal = false;
-    public $showApproveModal = false;
     public $showSickLeaveModal = false;
     public $availableItems;
 
-    // Properti Tab
     public $showExchangeRequests = false;
     public $showPublicExchanges = false;
     public $showBackupRequests = false;
 
-    // --- COMPUTED PROPERTIES ---
+    protected $rules = [
+        'sickReason' => 'required|string|min:10|max:500',
+        'targetItemId' => 'required|exists:schedules,id',
+        'swapScheduleId' => 'required|exists:schedules,id',
+    ];
 
-    public function getCombinedItemsProperty(): LengthAwarePaginator
+    public function mount()
+    {
+        $this->availableItems = collect();
+    }
+
+    public function getItemsProperty(): LengthAwarePaginator
     {
         $userId = Auth::id();
         if (!$userId) {
@@ -47,104 +52,92 @@ class CombinedSchedule extends Component
         }
 
         $combined = [];
-        $userRole = Auth::user()->role ?? 'user';
+        $userType = Auth::user()->user_type ?? null;
 
-        // Tampilkan My Schedules
         if (!$this->showExchangeRequests && !$this->showPublicExchanges && !$this->showBackupRequests) {
             $schedules = Schedule::where(function ($query) use ($userId) {
-                // Tampilkan jadwal yang dibuat oleh user (owner) ATAU yang di-assign ke user (user_id)
                 $query->where('created_by', $userId)
-                      ->orWhere('user_id', $userId);
+                    ->orWhere('user_id', $userId);
             })
             ->whereDate('date', '>=', now()->toDateString())
             ->with('creator')
             ->get();
 
             $schedulesArray = $schedules->map(fn($s) => [
-                'id' => $s->id, 
-                'title' => $s->title, 
+                'id' => $s->id,
+                'title' => $s->title,
                 'description' => $s->description,
-                'date' => $s->date, 
-                'start_time' => $s->start_time ?? null, 
+                'date' => $s->date,
+                'start_time' => $s->start_time ?? null,
                 'end_time' => $s->end_time ?? null,
-                'user_name' => optional($s->creator)->name ?? 'Unknown User',
-                'type' => 'schedule', 
-                'status' => null, 
-                'is_owner' => $s->created_by === $userId, // Flag kepemilikan
-                'is_assigned' => $s->user_id === $userId, // Flag assignment
+                'user_name' => optional($s->creator)->name ?? 'Pengguna Tidak Dikenal',
+                'type' => 'schedule',
+                'status' => null,
+                'is_owner' => $s->created_by === $userId,
+                'is_assigned' => $s->user_id === $userId,
             ])->toArray();
             $combined = array_merge($combined, $schedulesArray);
-        } 
-        
-        // Tampilkan Direct Exchange Requests
-        elseif ($this->showExchangeRequests) {
+        } elseif ($this->showExchangeRequests) {
             $exchanges = ScheduleExchange::where('to_user_id', $userId)
                 ->where('status', 'pending')
                 ->with('schedule', 'fromUser', 'targetSchedule')
                 ->get()
                 ->map(fn($e) => [
-                    'id' => $e->id, 
-                    'title' => optional($e->schedule)->title ?? 'Unknown Schedule',
-                    'description' => 'Direct request from ' . optional($e->fromUser)->name,
-                    'date' => optional($e->schedule)->date ?? now()->toDateString(), 
+                    'id' => $e->id,
+                    'title' => optional($e->schedule)->title ?? 'Jadwal Tidak Dikenal',
+                    'description' => 'Permintaan langsung dari ' . optional($e->fromUser)->name,
+                    'date' => optional($e->schedule)->date ?? now()->toDateString(),
                     'start_time' => optional($e->schedule)->start_time ?? null,
-                    'end_time' => optional($e->schedule)->end_time ?? null, 
-                    'user_name' => optional($e->fromUser)->name ?? 'Unknown User',
-                    'type' => 'exchange', 
-                    'status' => $e->status, 
+                    'end_time' => optional($e->schedule)->end_time ?? null,
+                    'user_name' => optional($e->fromUser)->name ?? 'Pengguna Tidak Dikenal',
+                    'type' => 'exchange',
+                    'status' => $e->status,
                     'schedule_id' => $e->schedule_id,
                     'exchange_details' => [
-                        'from_user' => optional($e->fromUser)->name, 
-                        'target_schedule' => optional($e->targetSchedule)->title ?? 'Schedule not found'
+                        'from_user' => optional($e->fromUser)->name,
+                        'target_schedule' => optional($e->targetSchedule)->title ?? 'Jadwal tidak ditemukan'
                     ]
                 ])->toArray();
             $combined = array_merge($combined, $exchanges);
-        } 
-        
-        // Tampilkan Public Exchanges
-        elseif ($this->showPublicExchanges) {
+        } elseif ($this->showPublicExchanges) {
             $publicExchanges = PublicScheduleExchange::where('status', 'pending')
                 ->where('from_user_id', '!=', $userId)
-                ->whereHas('fromUser', fn ($query) => $query->where('role', $userRole))
+                ->whereHas('fromUser', fn ($query) => $query->where('user_type', $userType))
                 ->with('schedule', 'fromUser')
                 ->get()
                 ->map(fn($e) => [
-                    'id' => $e->id, 
-                    'title' => optional($e->schedule)->title ?? 'Unknown Schedule',
-                    'description' => 'Posted by ' . optional($e->fromUser)->name,
-                    'date' => optional($e->schedule)->date ?? now()->toDateString(), 
+                    'id' => $e->id,
+                    'title' => optional($e->schedule)->title ?? 'Jadwal Tidak Dikenal',
+                    'description' => 'Diposting oleh ' . optional($e->fromUser)->name,
+                    'date' => optional($e->schedule)->date ?? now()->toDateString(),
                     'start_time' => optional($e->schedule)->start_time ?? null,
-                    'end_time' => optional($e->schedule)->end_time ?? null, 
-                    'user_name' => optional($e->fromUser)->name ?? 'Unknown User',
-                    'type' => 'public_exchange', 
+                    'end_time' => optional($e->schedule)->end_time ?? null,
+                    'user_name' => optional($e->fromUser)->name ?? 'Pengguna Tidak Dikenal',
+                    'type' => 'public_exchange',
                     'status' => $e->status,
                 ])->toArray();
             $combined = array_merge($combined, $publicExchanges);
-        } 
-        
-        // Tampilkan Backup Requests
-        elseif ($this->showBackupRequests) {
+        } elseif ($this->showBackupRequests) {
             $backupRequests = SickBackupRequest::where('status', 'pending')
                 ->where('sick_user_id', '!=', $userId)
-                ->whereHas('sickUser', fn ($query) => $query->where('role', $userRole))
+                ->whereHas('sickUser', fn ($query) => $query->where('user_type', $userType))
                 ->with('originalSchedule', 'sickUser')
                 ->get()
                 ->map(fn($r) => [
-                    'id' => $r->id, 
-                    'title' => optional($r->originalSchedule)->title ?? 'Unknown Schedule',
-                    'description' => 'Backup needed - ' . optional($r->sickUser)->name . ' is sick',
-                    'date' => $r->date ?? now()->toDateString(), 
+                    'id' => $r->id,
+                    'title' => optional($r->originalSchedule)->title ?? 'Jadwal Tidak Dikenal',
+                    'description' => 'Diperlukan cadangan - ' . optional($r->sickUser)->name . ' sedang sakit',
+                    'date' => $r->date ?? now()->toDateString(),
                     'start_time' => optional($r->originalSchedule)->start_time ?? null,
-                    'end_time' => optional($r->originalSchedule)->end_time ?? null, 
-                    'user_name' => optional($r->sickUser)->name ?? 'Unknown User',
-                    'type' => 'backup', 
-                    'status' => $r->status, 
+                    'end_time' => optional($r->originalSchedule)->end_time ?? null,
+                    'user_name' => optional($r->sickUser)->name ?? 'Pengguna Tidak Dikenal',
+                    'type' => 'backup',
+                    'status' => $r->status,
                     'reason' => $r->reason,
                 ])->toArray();
             $combined = array_merge($combined, $backupRequests);
         }
 
-        // Sorting dan Paginasi Manual
         usort($combined, function ($a, $b) {
             return strcmp($a['date'] . ($a['start_time'] ?? '00:00:00'), $b['date'] . ($b['start_time'] ?? '00:00:00'));
         });
@@ -163,33 +156,56 @@ class CombinedSchedule extends Component
         );
     }
 
-    // Properti Hitungan (Sudah Benar)
-    public function getTotalSchedulesProperty(): int { return Schedule::where('created_by', Auth::id())->orWhere('user_id', Auth::id())->whereDate('date', '>=', now()->toDateString())->count(); }
-    public function getTodaySchedulesProperty(): int { return Schedule::where('created_by', Auth::id())->orWhere('user_id', Auth::id())->whereDate('date', now()->toDateString())->count(); }
-    public function getPendingRequestsCountProperty(): int { return ScheduleExchange::where('to_user_id', Auth::id())->where('status', 'pending')->count(); }
-    public function getPublicExchangeCountProperty(): int 
-    { 
-        $userId = Auth::id();
-        $userRole = Auth::user()->role ?? 'user';
-        return PublicScheduleExchange::where('status', 'pending')
-            ->where('from_user_id', '!=', $userId)
-            ->whereHas('fromUser', fn ($query) => $query->where('role', $userRole))
+    public function getTotalSchedulesProperty(): int 
+    {
+        return Schedule::where(function ($query) {
+            $query->where('created_by', Auth::id())->orWhere('user_id', Auth::id());
+        })->whereDate('date', '>=', now()->toDateString())->count();
+    }
+    
+    public function getTodaySchedulesProperty(): int 
+    {
+        return Schedule::where(function ($query) {
+            $query->where('created_by', Auth::id())->orWhere('user_id', Auth::id());
+        })->whereDate('date', now()->toDateString())->count();
+    }
+    
+    public function getPendingRequestsCountProperty(): int 
+    {
+        return ScheduleExchange::where('to_user_id', Auth::id())
+            ->where('status', 'pending')
             ->count();
     }
+    
+    public function getPublicExchangeCountProperty(): int
+    {
+        $userId = Auth::id();
+        $userType = Auth::user()->user_type ?? null;
+        return PublicScheduleExchange::where('status', 'pending')
+            ->where('from_user_id', '!=', $userId)
+            ->whereHas('fromUser', fn ($query) => $query->where('user_type', $userType))
+            ->count();
+    }
+    
     public function getBackupRequestsCountProperty(): int
     {
         $userId = Auth::id();
-        $userRole = Auth::user()->role ?? 'user';
+        $userType = Auth::user()->user_type ?? null;
         return SickBackupRequest::where('status', 'pending')
             ->where('sick_user_id', '!=', $userId)
-            ->whereHas('sickUser', fn ($query) => $query->where('role', $userRole))
+            ->whereHas('sickUser', fn ($query) => $query->where('user_type', $userType))
             ->count();
     }
 
+    public function showMySchedules(): void
+    {
+        $this->showExchangeRequests = false;
+        $this->showPublicExchanges = false;
+        $this->showBackupRequests = false;
+        $this->resetPage();
+    }
 
-    // --- METHOD NAVIGASI (Sudah Benar) ---
-
-    public function toggleExchangeRequests()
+    public function toggleExchangeRequests(): void
     {
         $this->showExchangeRequests = true;
         $this->showPublicExchanges = false;
@@ -197,7 +213,7 @@ class CombinedSchedule extends Component
         $this->resetPage();
     }
 
-    public function togglePublicExchanges()
+    public function togglePublicExchanges(): void
     {
         $this->showPublicExchanges = true;
         $this->showExchangeRequests = false;
@@ -205,7 +221,7 @@ class CombinedSchedule extends Component
         $this->resetPage();
     }
 
-    public function toggleBackupRequests()
+    public function toggleBackupRequests(): void
     {
         $this->showBackupRequests = true;
         $this->showExchangeRequests = false;
@@ -213,20 +229,17 @@ class CombinedSchedule extends Component
         $this->resetPage();
     }
 
-    // --- METHOD AKSI SICK LEAVE ---
-
-    public function showSickLeaveModal($scheduleId)
+    public function showSickLeaveModal($scheduleId): void
     {
         $schedule = Schedule::find($scheduleId);
 
-        // KODE PERBAIKAN: Izinkan jika created_by SAYA ATAU user_id SAYA
         if (!$schedule || ($schedule->created_by !== Auth::id() && $schedule->user_id !== Auth::id())) {
-            session()->flash('error', 'You can only report sick leave for schedules you own or are currently assigned to.');
+            session()->flash('error', 'Anda hanya dapat melaporkan cuti sakit untuk jadwal yang Anda buat atau ditugaskan kepada Anda.');
             return;
         }
 
         if (now()->toDateString() > $schedule->date) {
-            session()->flash('error', 'Cannot report sick leave for a past schedule.');
+            session()->flash('error', 'Tidak dapat melaporkan cuti sakit untuk jadwal yang sudah lewat.');
             return;
         }
         
@@ -234,49 +247,66 @@ class CombinedSchedule extends Component
         $this->showSickLeaveModal = true;
     }
 
-    public function submitSickLeave()
+    public function submitSickLeave(): void
     {
         $this->validate(['sickReason' => 'required|string|min:10|max:500']);
+        
         $schedule = Schedule::find($this->sickScheduleId);
         
-        // Pengecekan keamanan terakhir
         if (!$schedule || ($schedule->created_by !== Auth::id() && $schedule->user_id !== Auth::id())) {
-             session()->flash('error', 'Invalid schedule or you do not have permission.');
-             $this->resetSickLeave();
-             return;
+            session()->flash('error', 'Jadwal tidak valid atau Anda tidak memiliki izin.');
+            $this->resetSickLeave();
+            return;
         }
 
         try {
             $sickRequest = SickBackupRequest::create([
                 'schedule_id' => $schedule->id,
-                'sick_user_id' => Auth::id(), // User yang sakit adalah user yang sedang login
+                'sick_user_id' => Auth::id(),
                 'date' => $schedule->date,
                 'reason' => $this->sickReason,
                 'status' => 'pending',
                 'requested_at' => now(),
             ]);
-            // Logic notifikasi...
-            session()->flash('message', 'Sick leave request submitted. Backup notifications sent to team members.');
+
+            $userType = Auth::user()->user_type ?? null;
+            $teamMembers = User::where('user_type', $userType)
+                ->where('id', '!=', Auth::id())
+                ->get();
+
+            foreach ($teamMembers as $member) {
+                $member->notify(new SickBackupNotification($sickRequest));
+            }
+
+            session()->flash('message', 'Permintaan cuti sakit berhasil dikirim. Notifikasi cadangan telah dikirim ke anggota tim.');
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to submit sick leave request. Please try again.');
+            \Log::error('Error mengirim cuti sakit untuk jadwal ID: ' . $this->sickScheduleId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal mengirim permintaan cuti sakit. Silakan coba lagi.');
         }
 
         $this->resetSickLeave();
         $this->resetPage();
     }
 
-    public function takeBackup($backupRequestId)
+    public function takeBackup($backupRequestId): void
     {
         $backupRequest = SickBackupRequest::find($backupRequestId);
+        
         if (!$backupRequest || $backupRequest->status !== 'pending') {
-            session()->flash('error', 'Backup request not found or no longer available.');
+            session()->flash('error', 'Permintaan cadangan tidak ditemukan atau sudah tidak tersedia.');
+            return;
+        }
+
+        $sickUser = $backupRequest->sickUser;
+        $currentUserType = Auth::user()->user_type;
+        if ($sickUser->user_type !== $currentUserType) {
+            session()->flash('error', 'Anda hanya dapat mengambil cadangan dari pengguna dengan user_type yang sama.');
             return;
         }
 
         try {
             $schedule = $backupRequest->originalSchedule;
             if ($schedule) {
-                // Assign schedule ke user yang mengambil backup
                 $schedule->update(['user_id' => Auth::id()]);
             }
             
@@ -285,195 +315,360 @@ class CombinedSchedule extends Component
                 'status' => 'approved',
                 'approved_at' => now(),
             ]);
-            // Logic notifikasi...
-            session()->flash('message', 'Backup assignment accepted. The sick user has been notified.');
+
+            if ($sickUser) {
+                $sickUser->notify(new SickBackupNotification($backupRequest));
+            }
+
+            session()->flash('message', 'Penugasan cadangan diterima. Pengguna yang sakit telah diberi tahu.');
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to accept backup assignment.');
+            \Log::error('Error mengambil cadangan untuk permintaan ID: ' . $backupRequestId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal menerima penugasan cadangan.');
         }
+        
         $this->resetPage();
     }
 
-    // --- METHOD AKSI DIRECT SWAP ---
-
-    public function initiateSwap($scheduleId)
+    public function initiateSwap($scheduleId): void
     {
         $schedule = Schedule::find($scheduleId);
 
-        // KODE PERBAIKAN: Izinkan jika created_by SAYA ATAU user_id SAYA
         if (!$schedule || ($schedule->created_by !== Auth::id() && $schedule->user_id !== Auth::id())) {
-            session()->flash('error', 'You can only exchange schedules you own or are currently assigned to.');
+            session()->flash('error', 'Anda hanya dapat menukar jadwal yang Anda buat atau yang ditugaskan kepada Anda.');
             return;
         }
 
         if (now()->toDateString() > $schedule->date) {
-            session()->flash('error', 'Cannot initiate swap for a past schedule.');
+            session()->flash('error', 'Tidak dapat memulai pertukaran untuk jadwal yang sudah lewat.');
             return;
         }
 
         $this->swapScheduleId = $scheduleId;
-        $userRole = Auth::user()->role ?? 'user';
+        $currentUserId = Auth::id();
+        $currentUserType = Auth::user()->user_type;
 
-        // Ambil jadwal yang BISA ditukar (milik orang lain dengan role yang sama)
-        $this->availableItems = Schedule::where(function ($query) {
-             // Pastikan jadwal yang ditampilkan bukan jadwal yang akan di-swap
-            $query->where('created_by', '!=', Auth::id())
-                  ->where('user_id', '!=', Auth::id());
-        })
-            ->whereHas('creator', fn($query) => $query->where('role', $userRole))
+        $allSchedules = Schedule::where('id', '!=', $scheduleId)
             ->whereDate('date', '>=', now()->toDateString())
-            ->with('creator')
+            ->with(['creator', 'user'])
+            ->whereHas('user', function ($query) use ($currentUserType) {
+                $query->where('user_type', $currentUserType);
+            })
             ->orderBy('date', 'asc')
+            ->orderBy('start_time', 'asc')
             ->get();
+
+        $this->availableItems = $allSchedules->filter(function ($item) use ($currentUserId) {
+            if ($item->created_by == $currentUserId && $item->user_id == $currentUserId) {
+                return false;
+            }
+            return true;
+        });
+
+        if ($this->availableItems->isEmpty()) {
+            session()->flash('error', 'Tidak ada jadwal yang tersedia untuk ditukar dengan pengguna yang memiliki user_type yang sama.');
+            return;
+        }
 
         $this->showSwapModal = true;
     }
     
-    public function requestSwap()
+    public function requestSwap(): void
     {
         $this->validate([
             'targetItemId' => 'required|exists:schedules,id',
             'swapScheduleId' => 'required|exists:schedules,id'
         ]);
 
-        $targetSchedule = Schedule::with('creator')->find($this->targetItemId);
+        $targetSchedule = Schedule::with('creator', 'user')->find($this->targetItemId);
         $mySchedule = Schedule::find($this->swapScheduleId);
 
-        // Pengecekan keamanan: Pastikan mySchedule masih dimiliki/di-assign ke user
         if (!$mySchedule || ($mySchedule->created_by !== Auth::id() && $mySchedule->user_id !== Auth::id())) {
-            session()->flash('error', 'Invalid source schedule or permission denied.');
+            session()->flash('error', 'Jadwal sumber tidak valid atau Anda tidak memiliki izin.');
             $this->resetSwap();
             return;
         }
 
-        // ... Logika Anda untuk membuat ScheduleExchange ...
+        if ($targetSchedule->created_by === Auth::id() || $targetSchedule->user_id === Auth::id()) {
+            session()->flash('error', 'Tidak dapat menukar dengan jadwal Anda sendiri.');
+            $this->resetSwap();
+            return;
+        }
+
+        $currentUserType = Auth::user()->user_type;
+        $targetUser = $targetSchedule->user ?: $targetSchedule->creator;
+        if ($targetUser->user_type !== $currentUserType) {
+            session()->flash('error', 'Anda hanya dapat menukar jadwal dengan pengguna yang memiliki user_type yang sama.');
+            $this->resetSwap();
+            return;
+        }
+
+        if (now()->toDateString() > $targetSchedule->date || now()->toDateString() > $mySchedule->date) {
+            session()->flash('error', 'Tidak dapat menukar jadwal yang sudah lewat.');
+            $this->resetSwap();
+            return;
+        }
+
+        try {
+            $existingExchange = ScheduleExchange::where([
+                ['schedule_id', $mySchedule->id],
+                ['target_schedule_id', $targetSchedule->id],
+                ['status', 'pending']
+            ])->orWhere([
+                ['schedule_id', $targetSchedule->id],
+                ['target_schedule_id', $mySchedule->id],
+                ['status', 'pending']
+            ])->first();
+
+            if ($existingExchange) {
+                session()->flash('error', 'Permintaan pertukaran untuk jadwal ini sudah tertunda.');
+                $this->resetSwap();
+                return;
+            }
+
+            $targetUserId = $targetSchedule->user_id ?: $targetSchedule->created_by;
+
+            $exchange = ScheduleExchange::create([
+                'schedule_id' => $mySchedule->id,
+                'target_schedule_id' => $targetSchedule->id,
+                'from_user_id' => Auth::id(),
+                'to_user_id' => $targetUserId,
+                'status' => 'pending',
+                'requested_at' => now(),
+            ]);
+
+            $targetUser = User::find($targetUserId);
+            if ($targetUser) {
+                $targetUser->notify(new ScheduleExchangeNotification($exchange));
+            }
+
+            session()->flash('message', 'Permintaan pertukaran berhasil dikirim. Menunggu persetujuan dari ' . ($targetUser->name ?? 'pengguna tujuan') . '.');
+        } catch (\Exception $e) {
+            \Log::error('Error meminta pertukaran untuk jadwal ID: ' . $this->swapScheduleId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal mengirim permintaan pertukaran. Silakan coba lagi.');
+        }
         
         $this->resetSwap();
         $this->resetPage();
     }
-    
-    // --- METHOD AKSI PUBLIC SWAP ---
 
-    public function initiatePublicSwap($itemId)
+    public function initiatePublicSwap($itemId): void
     {
         $schedule = Schedule::find($itemId);
 
-        // KODE PERBAIKAN: Izinkan jika created_by SAYA ATAU user_id SAYA
         if (!$schedule || ($schedule->created_by !== Auth::id() && $schedule->user_id !== Auth::id())) {
-            session()->flash('error', 'You can only post schedules you own or are currently assigned for public exchange.');
+            session()->flash('error', 'Anda hanya dapat memposting jadwal yang Anda buat atau yang ditugaskan untuk pertukaran publik.');
             return;
         }
 
         if (now()->toDateString() > $schedule->date) {
-            session()->flash('error', 'Cannot post a past schedule for exchange.');
+            session()->flash('error', 'Tidak dapat memposting jadwal yang sudah lewat untuk pertukaran.');
             return;
         }
+
+        try {
+            $existingPublicExchange = PublicScheduleExchange::where([
+                ['schedule_id', $schedule->id],
+                ['status', 'pending']
+            ])->first();
+
+            if ($existingPublicExchange) {
+                session()->flash('error', 'Jadwal ini sudah diposting untuk pertukaran publik.');
+                return;
+            }
+
+            PublicScheduleExchange::create([
+                'schedule_id' => $schedule->id,
+                'from_user_id' => Auth::id(),
+                'status' => 'pending',
+                'posted_at' => now(),
+            ]);
+
+            $currentUserType = Auth::user()->user_type;
+            $teamMembers = User::where('user_type', $currentUserType)
+                ->where('id', '!=', Auth::id())
+                ->get();
+
+            foreach ($teamMembers as $member) {
+                $member->notify(new ScheduleExchangeNotification([
+                    'schedule_id' => $schedule->id,
+                    'from_user_id' => Auth::id(),
+                    'type' => 'public_exchange',
+                ]));
+            }
+
+            session()->flash('message', 'Jadwal berhasil diposting untuk pertukaran publik. Anggota tim dengan user_type yang sama telah diberi tahu.');
+        } catch (\Exception $e) {
+            \Log::error('Error memposting pertukaran publik untuk jadwal ID: ' . $itemId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal memposting jadwal untuk pertukaran publik. Silakan coba lagi.');
+        }
         
-        // ... Logika Anda untuk membuat PublicScheduleExchange ...
-        
-        session()->flash('message', 'Schedule posted for public exchange. Team members have been notified.');
         $this->resetPage();
     }
 
-    public function acceptPublicExchange($publicExchangeId)
+    public function acceptPublicExchange($publicExchangeId): void
     {
-        $publicExchange = PublicScheduleExchange::with('fromUser')->find($publicExchangeId);
+        $publicExchange = PublicScheduleExchange::with('fromUser', 'schedule')->find($publicExchangeId);
 
         if (!$publicExchange || $publicExchange->status !== 'pending') {
-            session()->flash('error', 'Exchange request not found or no longer available.');
+            session()->flash('error', 'Permintaan pertukaran tidak ditemukan atau sudah tidak tersedia.');
             return;
         }
-        // ... Logika: Buat DirectExchange baru ke pemilik jadwal asli
+
+        if ($publicExchange->from_user_id === Auth::id()) {
+            session()->flash('error', 'Anda tidak dapat menerima pertukaran publik Anda sendiri.');
+            return;
+        }
+
+        $currentUserType = Auth::user()->user_type;
+        $fromUser = $publicExchange->fromUser;
+        if ($fromUser->user_type !== $currentUserType) {
+            session()->flash('error', 'Anda hanya dapat menerima pertukaran dari pengguna dengan user_type yang sama.');
+            return;
+        }
+
+        try {
+            $publicExchange->update([
+                'status' => 'accepted',
+                'accepted_by' => Auth::id(),
+                'accepted_at' => now()
+            ]);
+
+            $mySchedules = Schedule::where(function ($query) {
+                $query->where('created_by', Auth::id())->orWhere('user_id', Auth::id());
+            })
+            ->whereDate('date', '>=', now()->toDateString())
+            ->first();
+
+            if ($mySchedules) {
+                $directExchange = ScheduleExchange::create([
+                    'schedule_id' => $mySchedules->id,
+                    'target_schedule_id' => $publicExchange->schedule_id,
+                    'from_user_id' => Auth::id(),
+                    'to_user_id' => $publicExchange->from_user_id,
+                    'status' => 'pending',
+                    'requested_at' => now(),
+                ]);
+
+                $originalPoster = $publicExchange->fromUser;
+                if ($originalPoster) {
+                    $originalPoster->notify(new ScheduleExchangeNotification($directExchange));
+                }
+            }
+
+            session()->flash('message', 'Minat berhasil diungkapkan. Pemosting asli akan menghubungi Anda untuk menyelesaikan pertukaran.');
+        } catch (\Exception $e) {
+            \Log::error('Error menerima pertukaran publik ID: ' . $publicExchangeId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal menerima pertukaran publik. Silakan coba lagi.');
+        }
         
-        session()->flash('message', 'Interest expressed successfully. The original poster will contact you to finalize the exchange.');
         $this->resetPage();
     }
     
-    // --- METHOD AKSI PERSETUJUAN/PENOLAKAN ---
-
-    public function showApproveModal($exchangeId)
+    public function approveExchange($exchangeId): void
     {
         $exchange = ScheduleExchange::find($exchangeId);
-        if (!$exchange || $exchange->to_user_id !== Auth::id()) {
-            session()->flash('error', 'Exchange request not found or you do not have permission.');
-            return;
-        }
-        $this->exchangeIdToApprove = $exchangeId;
-        $this->showApproveModal = true;
-    }
-
-    public function rejectExchange($exchangeId)
-    {
-        $exchange = ScheduleExchange::find($exchangeId);
+        
         if (!$exchange || $exchange->to_user_id !== Auth::id() || $exchange->status !== 'pending') {
-            session()->flash('error', 'You do not have permission to reject this request or it is no longer pending.');
-            return;
-        }
-        try {
-             $exchange->update(['status' => 'rejected']);
-             // Logic notifikasi...
-             session()->flash('message', 'Exchange request rejected.');
-        } catch (\Exception $e) {
-             session()->flash('error', 'Failed to reject exchange request.');
-        }
-        $this->resetPage();
-    }
-
-    public function approveExchange()
-    {
-        $exchange = ScheduleExchange::find($this->exchangeIdToApprove);
-        if (!$exchange || $exchange->to_user_id !== Auth::id() || $exchange->status !== 'pending') {
-            session()->flash('error', 'Permission denied or request expired.');
-            $this->resetApprove();
+            \Log::error('Pertukaran tidak valid atau izin ditolak untuk ID: ' . $exchangeId);
+            session()->flash('error', 'Izin ditolak atau permintaan sudah kedaluwarsa.');
             return;
         }
 
         try {
-            $exchange->update(['status' => 'approved', 'approved_at' => now()]);
+            \Log::info('Menyetujui pertukaran ID: ' . $exchangeId);
+            $exchange->update([
+                'status' => 'approved', 
+                'approved_at' => now()
+            ]);
+            
             $this->performScheduleSwap($exchange);
-            // Logic notifikasi...
-            session()->flash('message', 'Schedule exchange approved and completed.');
+            
+            $requester = $exchange->fromUser;
+            if ($requester) {
+                $requester->notify(new ScheduleExchangeNotification($exchange));
+            }
+            
+            session()->flash('message', 'Pertukaran jadwal disetujui dan selesai.');
         } catch (\Exception $e) {
-            session()->flash('error', 'Failed to approve exchange. Please try again.');
+            \Log::error('Error menyetujui pertukaran ID: ' . $exchangeId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal menyetujui pertukaran: ' . $e->getMessage());
         }
-        $this->resetApprove();
+        
+        $this->resetPage();
+    }
+
+    public function rejectExchange($exchangeId): void
+    {
+        $exchange = ScheduleExchange::find($exchangeId);
+        
+        if (!$exchange || $exchange->to_user_id !== Auth::id() || $exchange->status !== 'pending') {
+            \Log::error('Pertukaran tidak valid atau izin ditolak untuk ID: ' . $exchangeId);
+            session()->flash('error', 'Anda tidak memiliki izin untuk menolak permintaan ini atau sudah tidak tertunda.');
+            return;
+        }
+        
+        try {
+            $exchange->update([
+                'status' => 'rejected', 
+                'rejected_at' => now()
+            ]);
+            
+            $requester = $exchange->fromUser;
+            if ($requester) {
+                $requester->notify(new ScheduleExchangeNotification($exchange));
+            }
+            
+            session()->flash('message', 'Permintaan pertukaran ditolak.');
+        } catch (\Exception $e) {
+            \Log::error('Error menolak pertukaran ID: ' . $exchangeId . ' - ' . $e->getMessage());
+            session()->flash('error', 'Gagal menolak permintaan pertukaran.');
+        }
+        
         $this->resetPage();
     }
     
-    private function performScheduleSwap($exchange)
+    private function performScheduleSwap($exchange): void
     {
-        $schedule1 = $exchange->schedule; // Jadwal milik requester (from_user)
-        $schedule2 = $exchange->targetSchedule; // Jadwal milik approver (to_user)
+        $schedule1 = $exchange->schedule;
+        $schedule2 = $exchange->targetSchedule;
 
         if (!$schedule1 || !$schedule2) {
-            throw new \Exception("One or both schedules missing for swap.");
+            throw new \Exception("Salah satu atau kedua jadwal tidak ditemukan untuk pertukaran.");
         }
-
-        // SWAP HANYA created_by
-        $tempCreatedBy = $schedule1->created_by;
-        $schedule1->update(['created_by' => $schedule2->created_by]);
-        $schedule2->update(['created_by' => $tempCreatedBy]);
         
-        // SWAP user_id
-        $tempUserId = $schedule1->user_id;
-        $schedule1->update(['user_id' => $schedule2->user_id]);
-        $schedule2->update(['user_id' => $tempUserId]);
+        $tempUserId1 = $schedule1->user_id;
+        $tempUserId2 = $schedule2->user_id;
+
+        $schedule1->update(['user_id' => $tempUserId2]);
+        $schedule2->update(['user_id' => $tempUserId1]);
     }
 
-    // --- METHOD RESET MODAL (Sudah Benar) ---
-
-    public function resetSickLeave() { /* ... */ $this->sickScheduleId = null; $this->sickReason = ''; $this->showSickLeaveModal = false; }
-    public function resetSwap() { /* ... */ $this->targetItemId = null; $this->swapScheduleId = null; $this->showSwapModal = false; $this->availableItems = collect(); }
-    public function resetApprove() { /* ... */ $this->exchangeIdToApprove = null; $this->showApproveModal = false; }
-
+    public function resetSickLeave(): void
+    { 
+        $this->sickScheduleId = null; 
+        $this->sickReason = ''; 
+        $this->showSickLeaveModal = false;
+        $this->resetValidation();
+    }
+    
+    public function resetSwap(): void
+    { 
+        $this->targetItemId = null; 
+        $this->swapScheduleId = null; 
+        $this->showSwapModal = false; 
+        $this->availableItems = collect();
+        $this->resetValidation();
+    }
+    
     public function render()
     {
         return view('livewire.combined-schedule', [
-            'items' => $this->getCombinedItemsProperty(),
-            'pendingRequestsCount' => $this->getPendingRequestsCountProperty(),
-            'publicExchangeCount' => $this->getPublicExchangeCountProperty(),
-            'backupRequestsCount' => $this->getBackupRequestsCountProperty(),
-            'totalSchedules' => $this->getTotalSchedulesProperty(),
-            'todaySchedules' => $this->getTodaySchedulesProperty(),
+            'items' => $this->items,
+            'pendingRequestsCount' => $this->pendingRequestsCount,
+            'publicExchangeCount' => $this->publicExchangeCount,
+            'backupRequestsCount' => $this->backupRequestsCount,
+            'totalSchedules' => $this->totalSchedules,
+            'todaySchedules' => $this->todaySchedules,
         ]);
     }
 }

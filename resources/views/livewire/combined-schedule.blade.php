@@ -26,7 +26,7 @@
         <div class="border-b border-gray-200">
             <nav class="flex space-x-8 px-6" aria-label="Tabs">
                 <button 
-                    wire:click="$set('showExchangeRequests', false); $set('showPublicExchanges', false); $set('showBackupRequests', false)"
+                    wire:click="showMySchedules"
                     class="py-4 px-1 border-b-2 font-medium text-sm {{ !$showExchangeRequests && !$showPublicExchanges && !$showBackupRequests ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                     My Schedules
                 </button>
@@ -40,23 +40,6 @@
                     @endif
                 </button>
                 
-                <button 
-                    wire:click="togglePublicExchanges"
-                    class="py-4 px-1 border-b-2 font-medium text-sm relative {{ $showPublicExchanges ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                    Public Exchanges
-                    @if($publicExchangeCount > 0)
-                        <span class="bg-green-500 text-white text-xs rounded-full px-2 py-1 ml-2">{{ $publicExchangeCount }}</span>
-                    @endif
-                </button>
-                
-                <button 
-                    wire:click="toggleBackupRequests"
-                    class="py-4 px-1 border-b-2 font-medium text-sm relative {{ $showBackupRequests ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                    Backup Needed
-                    @if($backupRequestsCount > 0)
-                        <span class="bg-orange-500 text-white text-xs rounded-full px-2 py-1 ml-2">{{ $backupRequestsCount }}</span>
-                    @endif
-                </button>
             </nav>
         </div>
     </div>
@@ -92,7 +75,7 @@
             @if($items->count() > 0)
                 <div class="space-y-4">
                     @foreach($items as $item)
-                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div wire:key="item-{{ $item['id'] }}" class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
                                     <h3 class="text-lg font-semibold text-gray-800">{{ $item['title'] }}</h3>
@@ -117,13 +100,7 @@
                                                 @endif
                                             </span>
                                         @endif
-                                        
-                                        <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                            </svg>
-                                            {{ $item['user_name'] }}
-                                        </span>
+                    
                                     </div>
 
                                     <div class="mt-2">
@@ -140,7 +117,7 @@
                                     
                                     <div class="mt-2">
                                         @if(isset($item['is_owner']) && $item['is_owner'])
-                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">Your Schedule</span>
+                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">Your Schedule (Owner)</span>
                                         @elseif(isset($item['is_assigned']) && $item['is_assigned'])
                                             <span class="bg-teal-100 text-teal-800 text-xs font-medium px-2.5 py-0.5 rounded">Assigned to You</span>
                                         @endif
@@ -162,8 +139,6 @@
 
                                 <div class="flex flex-col space-y-2 ml-4">
                                     @if($item['type'] === 'schedule' && !$showExchangeRequests && !$showPublicExchanges && !$showBackupRequests)
-                                        
-                                        {{-- Hapus filter is_owner, karena logic kepemilikan sudah di PHP component --}}
                                         <div class="flex flex-col space-y-2">
                                             <button 
                                                 wire:click="initiateSwap({{ $item['id'] }})"
@@ -171,11 +146,12 @@
                                                 Direct Exchange
                                             </button>
                                             
-                                            <button 
+                                            <!--for future use-->
+                                            <!-- <button 
                                                 wire:click="initiatePublicSwap({{ $item['id'] }})"
                                                 class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Post for Exchange
-                                            </button>
+                                            </button> -->
                                             
                                             <button 
                                                 wire:click="showSickLeaveModal({{ $item['id'] }})" 
@@ -187,7 +163,7 @@
                                     @elseif($item['type'] === 'exchange')
                                         <div class="flex flex-col space-y-2">
                                             <button 
-                                                wire:click="showApproveModal({{ $item['id'] }})"
+                                                wire:click="approveExchange({{ $item['id'] }})"
                                                 class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Approve
                                             </button>
@@ -197,15 +173,6 @@
                                                 class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Reject
                                             </button>
-                                            
-                                            {{-- Tambah tombol sick leave untuk jadwal yang akan diberikan requester --}}
-                                            @if(isset($item['schedule_id']))
-                                                <button 
-                                                    wire:click="showSickLeaveModal({{ $item['schedule_id'] }})" 
-                                                    class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded text-sm">
-                                                    Report Sick
-                                                </button>
-                                            @endif
                                         </div>
                                     
                                     @elseif($item['type'] === 'public_exchange')
@@ -262,7 +229,7 @@
             @endif
         </div>
     </div>
-
+    
     @if($showSwapModal)
         <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-md bg-white">
@@ -281,16 +248,16 @@
                     @if($availableItems && $availableItems->count() > 0)
                         <div class="space-y-2 mb-4 max-h-60 overflow-y-auto">
                             @foreach($availableItems as $availableItem)
-                                <div class="border rounded-lg p-3 hover:bg-gray-50">
+                                <div wire:key="available-item-{{ $availableItem->id }}" class="border rounded-lg p-3 hover:bg-gray-50">
                                     <label class="flex items-center cursor-pointer">
-                                        <input type="radio" wire:model="targetItemId" value="{{ $availableItem->id }}" class="mr-3">
+                                        <input type="radio" wire:model.live="targetItemId" value="{{ $availableItem->id }}" class="mr-3">
                                         <div class="flex-1">
                                             <h4 class="font-medium text-gray-900">{{ $availableItem->title }}</h4>
                                             <div class="text-sm text-gray-600 space-y-1">
-                                                <p><span class="font-medium">Team Member:</span> {{ $availableItem->creator->name ?? 'Unknown' }}</p>
+                                                <p><span class="font-medium">Team Member:</span> {{ optional($availableItem->user)->name ?? optional($availableItem->creator)->name ?? 'Unknown' }}</p>
                                                 <p><span class="font-medium">Date:</span> {{ \Carbon\Carbon::parse($availableItem->date)->format('M d, Y') }}</p>
                                                 @if($availableItem->start_time)
-                                                    <p><span class="font-medium">Time:</span> 
+                                                    <p><span class="font-medium">Time:</span>
                                                         {{ \Carbon\Carbon::parse($availableItem->start_time)->format('H:i') }}
                                                         @if($availableItem->end_time)
                                                             - {{ \Carbon\Carbon::parse($availableItem->end_time)->format('H:i') }}
@@ -309,53 +276,21 @@
                     @else
                         <div class="text-center py-8">
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
                             </svg>
                             <h3 class="mt-2 text-sm font-medium text-gray-900">No schedules available for exchange</h3>
-                            <p class="mt-1 text-sm text-gray-500">
-                                There are currently no schedules from other team members available for exchange.
-                            </p>
+                            <p class="mt-1 text-sm text-gray-500">There are currently no schedules from other team members available for exchange.</p>
                         </div>
                     @endif
 
-                    <div class="flex justify-end space-x-3">
+                    <div class="flex justify-end space-x-3 mt-6">
                         <button wire:click="resetSwap" class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded">
                             Cancel
                         </button>
-                        @if($availableItems && $availableItems->count() > 0)
-                            <button wire:click="requestSwap" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" {{ !$targetItemId ? 'disabled' : '' }}>
-                                Send Exchange Request
-                            </button>
-                        @endif
+                        <button wire:click="requestSwap" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" {{ !$targetItemId ? 'disabled' : '' }}>
+                            Send Exchange Request
+                        </button>
                     </div>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    @if($showApproveModal)
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/3 shadow-lg rounded-md bg-white">
-                <div class="mt-3 text-center">
-                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-                        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                    </div>
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mt-4">Approve Schedule Exchange</h3>
-                    <div class="mt-2">
-                        <p class="text-sm text-gray-500">
-                            Are you sure you want to approve this schedule exchange? This action will swap the schedules permanently.
-                        </p>
-                    </div>
-                </div>
-                <div class="flex justify-center space-x-3 mt-6">
-                    <button wire:click="resetApprove" class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded">
-                        Cancel
-                    </button>
-                    <button wire:click="approveExchange" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                        Approve Exchange
-                    </button>
                 </div>
             </div>
         </div>
@@ -406,11 +341,11 @@
                     </div>
 
                     <div class="flex justify-end space-x-3">
-                        <button wire:click="resetSickLeave" class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded">
-                            Cancel
-                        </button>
                         <button wire:click="submitSickLeave" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
                             Submit Sick Leave
+                        </button>
+                        <button wire:click="resetSickLeave" class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded">
+                            Cancel
                         </button>
                     </div>
                 </div>
