@@ -3,17 +3,17 @@
         <h1 class="text-2xl font-bold text-gray-800 mb-4">My Schedule Dashboard</h1>
         
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-blue-50 p-4 rounded-lg">
-                <h3 class="text-sm font-medium text-blue-600">Total Schedules</h3>
-                <p class="text-2xl font-bold text-blue-800">{{ $totalSchedules }}</p>
+            <div class="bg-indigo-50 p-4 rounded-lg">
+                <h3 class="text-sm font-medium text-indigo-600">Total Schedules</h3>
+                <p class="text-2xl font-bold text-indigo-800">{{ $totalSchedules }}</p>
             </div>
-            <div class="bg-green-50 p-4 rounded-lg">
-                <h3 class="text-sm font-medium text-green-600">Today's Schedules</h3>
-                <p class="text-2xl font-bold text-green-800">{{ $todaySchedules }}</p>
+            <div class="bg-emerald-50 p-4 rounded-lg">
+                <h3 class="text-sm font-medium text-emerald-600">Today's Schedules</h3>
+                <p class="text-2xl font-bold text-emerald-800">{{ $todaySchedules }}</p>
             </div>
-            <div class="bg-yellow-50 p-4 rounded-lg">
-                <h3 class="text-sm font-medium text-yellow-600">Pending Requests</h3>
-                <p class="text-2xl font-bold text-yellow-800">{{ $pendingRequestsCount }}</p>
+            <div class="bg-amber-50 p-4 rounded-lg">
+                <h3 class="text-sm font-medium text-amber-600">Pending Requests</h3>
+                <p class="text-2xl font-bold text-amber-800">{{ $pendingRequestsCount }}</p>
             </div>
             <div class="bg-purple-50 p-4 rounded-lg">
                 <h3 class="text-sm font-medium text-purple-600">Public Exchanges</h3>
@@ -27,25 +27,24 @@
             <nav class="flex space-x-8 px-6" aria-label="Tabs">
                 <button 
                     wire:click="showMySchedules"
-                    class="py-4 px-1 border-b-2 font-medium text-sm {{ !$showExchangeRequests && !$showPublicExchanges && !$showBackupRequests ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    class="py-4 px-1 border-b-2 font-medium text-sm {{ !$showExchangeRequests && !$showPublicExchanges && !$showBackupRequests ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                     My Schedules
                 </button>
                 
                 <button 
                     wire:click="toggleExchangeRequests"
-                    class="py-4 px-1 border-b-2 font-medium text-sm relative {{ $showExchangeRequests ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    class="py-4 px-1 border-b-2 font-medium text-sm relative {{ $showExchangeRequests ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
                     Direct Requests
                     @if($pendingRequestsCount > 0)
                         <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-2">{{ $pendingRequestsCount }}</span>
                     @endif
                 </button>
-                
             </nav>
         </div>
     </div>
 
     @if (session()->has('message'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+        <div class="bg-emerald-100 border border-emerald-400 text-emerald-700 px-4 py-3 rounded mb-6">
             {{ session('message') }}
         </div>
     @endif
@@ -100,16 +99,15 @@
                                                 @endif
                                             </span>
                                         @endif
-                    
                                     </div>
 
                                     <div class="mt-2">
                                         @if($item['type'] === 'schedule')
-                                            <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Schedule</span>
+                                            <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">Schedule</span>
                                         @elseif($item['type'] === 'exchange')
-                                            <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">Exchange Request</span>
+                                            <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded">Exchange Request</span>
                                         @elseif($item['type'] === 'public_exchange')
-                                            <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Public Exchange</span>
+                                            <span class="bg-emerald-100 text-emerald-800 text-xs font-medium px-2.5 py-0.5 rounded">Public Exchange</span>
                                         @elseif($item['type'] === 'backup')
                                             <span class="bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded">Backup Needed</span>
                                         @endif
@@ -142,14 +140,14 @@
                                         <div class="flex flex-col space-y-2">
                                             <button 
                                                 wire:click="initiateSwap({{ $item['id'] }})"
-                                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm">
+                                                class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Direct Exchange
                                             </button>
                                             
                                             <!--for future use-->
                                             <!-- <button 
                                                 wire:click="initiatePublicSwap({{ $item['id'] }})"
-                                                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm">
+                                                class="bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Post for Exchange
                                             </button> -->
                                             
@@ -164,7 +162,7 @@
                                         <div class="flex flex-col space-y-2">
                                             <button 
                                                 wire:click="approveExchange({{ $item['id'] }})"
-                                                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm">
+                                                class="bg-emerald-500 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Approve
                                             </button>
                                             
@@ -287,7 +285,7 @@
                         <button wire:click="resetSwap" class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded">
                             Cancel
                         </button>
-                        <button wire:click="requestSwap" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" {{ !$targetItemId ? 'disabled' : '' }}>
+                        <button wire:click="requestSwap" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded" {{ !$targetItemId ? 'disabled' : '' }}>
                             Send Exchange Request
                         </button>
                     </div>
@@ -317,23 +315,23 @@
                             wire:model="sickReason" 
                             id="sickReason"
                             rows="4" 
-                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             placeholder="Please provide details about your illness (minimum 10 characters)"></textarea>
                         @error('sickReason')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
                     </div>
 
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+                    <div class="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                                 </svg>
                             </div>
                             <div class="ml-3">
-                                <h3 class="text-sm font-medium text-yellow-800">Important Notice</h3>
-                                <div class="mt-2 text-sm text-yellow-700">
+                                <h3 class="text-sm font-medium text-amber-800">Important Notice</h3>
+                                <div class="mt-2 text-sm text-amber-700">
                                     <p>Your team members will be notified about your sick leave and asked if they can provide backup coverage. Please ensure your reason is professional and accurate.</p>
                                 </div>
                             </div>
@@ -355,7 +353,7 @@
 
     <div wire:loading class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
             <span class="text-gray-700">Processing...</span>
         </div>
     </div>

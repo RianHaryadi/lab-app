@@ -1,50 +1,70 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-2xl text-gray-800 leading-tight">
-                {{ __('Welcome back, ') }}<span class="text-indigo-600">{{ Auth::user()->name }}</span>
+        <div class="flex justify-between items-center w-full">
+            <h2 class="font-semibold text-2xl leading-tight bg-gradient-to-r from-[#C71E64] to-[#4D2D8C] bg-clip-text text-transparent">
+                {{ __('Welcome back, ') }}<span class="text-[#FF714B]">{{ Auth::user()->name }}</span>
             </h2>
-            <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-6 relative">
+                <!-- Notification Icon with Dropdown -->
+                <div x-data="{ open: false }" @click.away="open = false" class="relative">
+                    <button @click="open = !open" class="relative text-[#FF714B] hover:text-[#C71E64] focus:outline-none transition-colors duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 17h5l-1.405-1.405C18.21 14.79 18 13.918 18 13V9a6 6 0 10-12 0v4c0 .918-.21 1.79-.595 2.595L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <!-- Badge Notifikasi -->
+                        <span x-show="open || {{ auth()->user()->unreadNotifications->count() > 0 }}" class="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-[#C71E64] rounded-full">
+                            {{ auth()->user()->unreadNotifications->count() }}
+                        </span>
+                    </button>
 
-    <!-- Notification Icon -->
-    <button class="relative text-gray-600 hover:text-gray-800 focus:outline-none">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M15 17h5l-1.405-1.405C18.21 14.79 18 13.918 18 13V9a6 6 0 10-12 0v4c0 
-                .918-.21 1.79-.595 2.595L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-       
-    </button>
-</div>
-
-
+                    <!-- Dropdown Notifikasi -->
+                    <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl py-2 ring-1 ring-[#F2F2F2]/50 z-10">
+                        @forelse (auth()->user()->notifications as $notification)
+                            <form action="{{ route('notifications.read', $notification->id) }}" method="POST" class="block">
+                                @csrf
+                                <button type="submit" class="w-full text-left px-4 py-2 text-sm text-[#4D2D8C] hover:bg-[#F2F2F2]/20 transition-colors duration-300 {{ $notification->read_at ? '' : 'font-bold' }}">
+                                    <div class="flex items-center justify-between">
+                                        <span>{{ $notification->data['message'] }}</span>
+                                        <span class="text-xs text-[#4D2D8C]/50">{{ $notification->created_at->diffForHumans() }}</span>
+                                    </div>
+                                    <p class="text-xs text-[#4D2D8C]/50 mt-1">{{ $notification->data['schedule_title'] }} - {{ \Carbon\Carbon::parse($notification->data['schedule_date'])->format('M d, Y') }}</p>
+                                </button>
+                            </form>
+                        @empty
+                            <div class="px-4 py-2 text-sm text-[#4D2D8C]/50">No new notifications</div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
         </div>
     </x-slot>
 
-    <div class="py-6 px-4 sm:px-6 lg:px-8">
+    <!-- Sisanya dari dashboard.blade.php tetap sama -->
+    <div class="py-6 px-4 sm:px-6 lg:px-8 bg-[#F2F2F2]">
         <!-- Main Content Area -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Activity Feed -->
-            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
-                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                    <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
-                    <a href="#" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View All</a>
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="p-6 border-b border-[#F2F2F2]/50 flex justify-between items-center">
+                    <h3 class="text-lg font-medium text-[#4D2D8C]">Recent Activity</h3>
+                    <a href="#" class="text-sm font-medium text-[#C71E64] hover:text-[#FF714B] transition-colors duration-300">View All</a>
                 </div>
-                <div class="divide-y divide-gray-200">
+                <div class="divide-y divide-[#F2F2F2]/50">
                     <!-- Activity Item -->
-                    <div class="p-6 flex items-start hover:bg-gray-50 transition-colors">
+                    <div class="p-6 flex items-start hover:bg-[#F2F2F2]/20 transition-colors duration-300">
                         <div class="flex-shrink-0">
                             <img class="h-10 w-10 rounded-full" src="https://ui-avatars.com/api/?name=John+Doe&background=random" alt="">
                         </div>
                         <div class="ml-4 flex-1">
                             <div class="flex items-center justify-between">
                                 <p class="text-sm font-medium text-gray-900">John Doe</p>
-                                <p class="text-xs text-gray-500">2h ago</p>
+                                <p class="text-xs text-[#4D2D8C]/70">2h ago</p>
                             </div>
-                            <p class="text-sm text-gray-500 mt-1">Created a new project "Website Redesign"</p>
+                            <p class="text-sm text-[#4D2D8C]/50 mt-1">Created a new project "Website Redesign"</p>
                             <div class="mt-2 flex space-x-2">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Design</span>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Urgent</span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF714B]/10 text-[#FF714B]">Design</span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#C71E64]/10 text-[#C71E64]">Urgent</span>
                             </div>
                         </div>
                     </div>
@@ -55,19 +75,19 @@
             <!-- Quick Stats -->
             <div class="space-y-6">
                 <!-- Projects Progress -->
-                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Projects Progress</h3>
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div class="p-6 border-b border-[#F2F2F2]/50">
+                        <h3 class="text-lg font-medium text-[#4D2D8C]">Projects Progress</h3>
                     </div>
                     <div class="p-6">
                         <div class="space-y-4">
                             <div>
                                 <div class="flex justify-between text-sm mb-1">
-                                    <span>Website Redesign</span>
-                                    <span>72%</span>
+                                    <span class="text-[#4D2D8C]">Website Redesign</span>
+                                    <span class="text-[#C71E64]">72%</span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-indigo-600 h-2 rounded-full" style="width: 72%"></div>
+                                <div class="w-full bg-[#F2F2F2]/50 rounded-full h-2">
+                                    <div class="bg-[#FF714B] h-2 rounded-full" style="width: 72%"></div>
                                 </div>
                             </div>
                             <!-- More progress bars -->
@@ -76,19 +96,19 @@
                 </div>
 
                 <!-- Upcoming Tasks -->
-                <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-medium text-gray-900">Upcoming Tasks</h3>
+                <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                    <div class="p-6 border-b border-[#F2F2F2]/50">
+                        <h3 class="text-lg font-medium text-[#4D2D8C]">Upcoming Tasks</h3>
                     </div>
                     <div class="p-6">
-                        <ul class="space-y-4">
+                        <ul class="space-x-4">
                             <li class="flex items-start">
                                 <div class="flex-shrink-0 h-5 w-5 relative mt-0.5">
-                                    <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <input type="checkbox" class="h-5 w-5 rounded border-[#F2F2F2]/50 text-[#C71E64] focus:ring-[#FF714B]">
                                 </div>
                                 <div class="ml-3">
-                                    <p class="text-sm font-medium text-gray-900">Client meeting</p>
-                                    <p class="text-xs text-gray-500 mt-1">Today, 2:00 PM</p>
+                                    <p class="text-sm font-medium text-[#4D2D8C]">Client meeting</p>
+                                    <p class="text-xs text-[#4D2D8C]/50 mt-1">Today, 2:00 PM</p>
                                 </div>
                             </li>
                             <!-- More tasks -->
@@ -99,33 +119,33 @@
         </div>
 
         <!-- Recent Projects -->
-        <div class="mt-8 bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-medium text-gray-900">Recent Projects</h3>
-                <a href="#" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">View All</a>
+        <div class="mt-8 bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="p-6 border-b border-[#F2F2F2]/50 flex justify-between items-center">
+                <h3 class="text-lg font-medium text-[#4D2D8C]">Recent Projects</h3>
+                <a href="#" class="text-sm font-medium text-[#C71E64] hover:text-[#FF714B] transition-colors duration-300">View All</a>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+                <table class="min-w-full divide-y divide-[#F2F2F2]/50">
+                    <thead class="bg-[#F2F2F2]/50">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-[#4D2D8C]/70 uppercase tracking-wider">Project</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-[#4D2D8C]/70 uppercase tracking-wider">Team</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-[#4D2D8C]/70 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-[#4D2D8C]/70 uppercase tracking-wider">Due Date</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <tr class="hover:bg-gray-50 transition-colors">
+                    <tbody class="bg-white divide-y divide-[#F2F2F2]/50">
+                        <tr class="hover:bg-[#F2F2F2]/20 transition-colors duration-300">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-md flex items-center justify-center text-indigo-600">
+                                    <div class="flex-shrink-0 h-10 w-10 bg-[#FF714B]/10 rounded-md flex items-center justify-center text-[#FF714B]">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2H5a1 1 0 010-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clip-rule="evenodd" />
                                         </svg>
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-medium text-gray-900">Website Redesign</div>
-                                        <div class="text-sm text-gray-500">Marketing</div>
+                                        <div class="text-sm font-medium text-[#4D2D8C]">Website Redesign</div>
+                                        <div class="text-sm text-[#4D2D8C]/50">Marketing</div>
                                     </div>
                                 </div>
                             </td>
@@ -136,9 +156,9 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-[#FF714B]/10 text-[#FF714B]">Active</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jun 15, 2023</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-[#4D2D8C]/50">Jun 15, 2023</td>
                         </tr>
                         <!-- More project rows -->
                     </tbody>

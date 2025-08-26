@@ -1,5 +1,5 @@
 <div x-data="{ 
-        currentTime: '{{ $currentTime->format('H:i:s') }}',
+        currentTime: '{{ now()->format('H:i:s') }}',
         sessionPhoto: null,
         init() {
             setInterval(() => {
@@ -10,15 +10,15 @@
     }"
     class="relative bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-4xl mx-auto border border-gray-200 overflow-hidden transform transition-all duration-300 hover:shadow-3xl"
 >
-    <!-- Decorative Accents -->
-    <div class="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
-    <div class="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-blue-100 to-indigo-100 rounded-full translate-x-1/2 translate-y-1/2 opacity-50"></div>
+    <!-- Decorative Accents (Opsional, hapus jika ingin latar putih murni) -->
+    <div class="absolute top-0 left-0 w-24 h-24 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-50"></div>
+    <div class="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-blue-200 to-indigo-200 rounded-full translate-x-1/2 translate-y-1/2 opacity-50"></div>
 
     <!-- Header: Title and Time -->
-    <div class="relative flex flex-col md:flex-row justify-between items-start md:items-center pb-8 border-b-2 border-gray-100">
+    <div class="relative flex flex-col md:flex-row justify-between items-start md:items-center pb-8 border-b-2 border-gray-200">
         <div>
             <h2 class="text-5xl font-extrabold text-gray-900 tracking-wide animate-pulse">Absensi Harian</h2>
-            <p class="text-lg text-gray-600 mt-3">{{ $currentTime->format('l, j F Y') }}</p>
+            <p class="text-lg text-gray-600 mt-3">{{ now()->format('l, j F Y') }}</p>
         </div>
         <div class="mt-6 md:mt-0">
             <div class="text-6xl font-mono font-bold text-indigo-700 animate-bounce" x-text="currentTime"></div>

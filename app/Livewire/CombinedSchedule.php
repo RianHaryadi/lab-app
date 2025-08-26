@@ -317,7 +317,7 @@ class CombinedSchedule extends Component
             ]);
 
             if ($sickUser) {
-                $sickUser->notify(new SickBackupNotification($backupRequest));
+                $sickUser->notify(new SickBackupNotification($sickRequest));
             }
 
             session()->flash('message', 'Penugasan cadangan diterima. Pengguna yang sakit telah diberi tahu.');
@@ -438,7 +438,27 @@ class CombinedSchedule extends Component
 
             $targetUser = User::find($targetUserId);
             if ($targetUser) {
-                $targetUser->notify(new ScheduleExchangeNotification($exchange));
+                \Log::info('Sending Direct Exchange Request notification', [
+                    'to_user_id' => $targetUser->id,
+                    'exchange_id' => $exchange->id,
+                    'schedule_id' => $exchange->schedule_id,
+                    'target_schedule_id' => $exchange->target_schedule_id,
+                    'from_user_id' => $exchange->from_user_id,
+                ]);
+                try {
+                    $targetUser->notify(new ScheduleExchangeNotification($exchange, 'request'));
+                    \Log::info('Notification sent successfully to user ID: ' . $targetUser->id);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send notification to user ID: ' . $targetUser->id . ' - ' . $e->getMessage());
+                    session()->flash('error', 'Gagal mengirim notifikasi ke pengguna tujuan.');
+                    $this->resetSwap();
+                    return;
+                }
+            } else {
+                \Log::error('Target user not found for exchange ID: ' . $exchange->id);
+                session()->flash('error', 'Pengguna tujuan tidak ditemukan.');
+                $this->resetSwap();
+                return;
             }
 
             session()->flash('message', 'Permintaan pertukaran berhasil dikirim. Menunggu persetujuan dari ' . ($targetUser->name ?? 'pengguna tujuan') . '.');
@@ -476,7 +496,7 @@ class CombinedSchedule extends Component
                 return;
             }
 
-            PublicScheduleExchange::create([
+            $publicExchange = PublicScheduleExchange::create([
                 'schedule_id' => $schedule->id,
                 'from_user_id' => Auth::id(),
                 'status' => 'pending',
@@ -489,11 +509,7 @@ class CombinedSchedule extends Component
                 ->get();
 
             foreach ($teamMembers as $member) {
-                $member->notify(new ScheduleExchangeNotification([
-                    'schedule_id' => $schedule->id,
-                    'from_user_id' => Auth::id(),
-                    'type' => 'public_exchange',
-                ]));
+                $member->notify(new ScheduleExchangeNotification($publicExchange, 'public_request'));
             }
 
             session()->flash('message', 'Jadwal berhasil diposting untuk pertukaran publik. Anggota tim dengan user_type yang sama telah diberi tahu.');
@@ -551,7 +567,7 @@ class CombinedSchedule extends Component
 
                 $originalPoster = $publicExchange->fromUser;
                 if ($originalPoster) {
-                    $originalPoster->notify(new ScheduleExchangeNotification($directExchange));
+                    $originalPoster->notify(new ScheduleExchangeNotification($directExchange, 'request'));
                 }
             }
 
@@ -585,7 +601,7 @@ class CombinedSchedule extends Component
             
             $requester = $exchange->fromUser;
             if ($requester) {
-                $requester->notify(new ScheduleExchangeNotification($exchange));
+                $requester->notify(new ScheduleExchangeNotification($exchange, 'approved'));
             }
             
             session()->flash('message', 'Pertukaran jadwal disetujui dan selesai.');
@@ -615,7 +631,7 @@ class CombinedSchedule extends Component
             
             $requester = $exchange->fromUser;
             if ($requester) {
-                $requester->notify(new ScheduleExchangeNotification($exchange));
+                $requester->notify(new ScheduleExchangeNotification($exchange, 'rejected'));
             }
             
             session()->flash('message', 'Permintaan pertukaran ditolak.');

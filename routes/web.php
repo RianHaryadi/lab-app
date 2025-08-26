@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\NotificationController;
 
 // Rute untuk halaman utama, mengarahkan ke halaman login
 Route::get('/', function () {
@@ -35,7 +36,7 @@ Route::get('/task', function () {
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
-
+Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 // Rute untuk login
 Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
 Route::post('login', [AuthenticatedSessionController::class, 'store']);
