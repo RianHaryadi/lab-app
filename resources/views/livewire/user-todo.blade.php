@@ -1,46 +1,118 @@
-<div class="bg-white overflow-hidden shadow-2xl rounded-2xl p-6 lg:p-10 transform transition-all duration-300 hover:shadow-3xl">
-    <h2 class="text-3xl font-extrabold mb-6 text-indigo-900 tracking-wide animate-pulse">Daftar Tugas Saya</h2>
-    
-    @if($todos->isEmpty())
-        <div class="text-center py-12 bg-gray-50 rounded-xl shadow-inner animate-fade-in">
-            <svg class="mx-auto h-16 w-16 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M18 10h.01" />
-            </svg>
-            <h3 class="mt-4 text-lg font-semibold text-gray-700">Tidak ada tugas saat ini.</h3>
-            <p class="mt-2 text-sm text-gray-500">Kerja bagus! Hubungi admin jika ada kesalahan.</p>
-        </div>
-    @else
-        <ul class="space-y-6">
-            @foreach($todos as $todo)
-                <li class="bg-white border-2 border-gray-100 rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                    <div>
-                        <div class="font-semibold text-xl text-gray-900">{{ $todo->task }}</div>
-                        <div class="text-sm text-gray-600">
-                            @if($todo->due_date)
-                                Batas waktu: {{ \Carbon\Carbon::parse($todo->due_date)->translatedFormat('d F Y') }}
-                            @else
-                                Batas waktu: Tidak ditentukan
-                            @endif
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center space-x-3">
-                        @if ($todo->status === 'pending')
-                            <button wire:click="updateTodoStatus({{ $todo->id }}, 'in_progress')" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105">
-                                Mulai
-                            </button>
-                        @elseif ($todo->status === 'in_progress')
-                            <button wire:click="updateTodoStatus({{ $todo->id }}, 'done')" class="bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105">
-                                Selesai
-                            </button>
-                        @else
-                            <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 shadow-inner animate-pulse">
-                                Selesai
-                            </span>
-                        @endif
-                    </div>
-                </li>
-            @endforeach
-        </ul>
-    @endif
+<div class="max-w-4xl mx-auto">
+    <!-- Daftar Tugas -->
+    <div class="bg-gradient-to-br from-[#F2F2F2] to-[#C71E64]/5 p-6 sm:p-8 rounded-3xl shadow-2xl mb-8 border border-[#C71E64]/20 transition-all duration-500 hover:shadow-3xl">
+        <h2 class="text-3xl font-extrabold mb-8 text-[#4D2D8C] tracking-tight animate-fade-in">Daftar Tugas</h2>
+        
+        @if ($todos->isEmpty())
+            <div class="flex flex-col items-center justify-center py-12 text-[#4D2D8C]/80 bg-[#C71E64]/5 rounded-2xl shadow-inner animate-fade-in">
+                <svg class="w-16 h-16 mb-4 text-[#C71E64] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                <p class="text-xl font-semibold">Belum ada tugas yang dibuat.</p>
+                <p class="mt-2 text-sm text-[#4D2D8C]/60">Tambahkan tugas baru untuk memulai!</p>
+            </div>
+        @else
+            <div class="overflow-x-auto animate-fade-in">
+                <table class="min-w-full divide-y divide-[#C71E64]/20">
+                    <thead class="bg-gradient-to-r from-[#C71E64]/10 to-[#FF714B]/10">
+                        <tr>
+                            <th scope="col" class="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-[#4D2D8C] uppercase tracking-wider cursor-pointer hover:text-[#4D2D8C]/90 transition-colors">
+                                Judul
+                                <span class="ml-1 text-[#C71E64]/80">↕</span>
+                            </th>
+                            <th scope="col" class="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-[#4D2D8C] uppercase tracking-wider cursor-pointer hover:text-[#4D2D8C]/90 transition-colors">
+                                Ditugaskan ke
+                                <span class="ml-1 text-[#C71E64]/80">↕</span>
+                            </th>
+                            <th scope="col" class="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-[#4D2D8C] uppercase tracking-wider cursor-pointer hover:text-[#4D2D8C]/90 transition-colors">
+                                Batas Waktu
+                                <span class="ml-1 text-[#C71E64]/80">↕</span>
+                            </th>
+                            <th scope="col" class="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-[#4D2D8C] uppercase tracking-wider cursor-pointer hover:text-[#4D2D8C]/90 transition-colors">
+                                Status
+                                <span class="ml-1 text-[#C71E64]/80">↕</span>
+                            </th>
+                            <th scope="col" class="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-[#4D2D8C] uppercase tracking-wider cursor-pointer hover:text-[#4D2D8C]/90 transition-colors">
+                                Dibuat oleh
+                                <span class="ml-1 text-[#C71E64]/80">↕</span>
+                            </th>
+                            <th scope="col" class="px-4 sm:px-6 py-4 text-left text-sm font-semibold text-[#4D2D8C] uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-[#F2F2F2] divide-y divide-[#C71E64]/20">
+                        @foreach ($todos as $task)
+                            <tr wire:key="{{ $task->id }}" class="hover:bg-[#C71E64]/5 transition-all duration-300 transform hover:scale-[1.01] sm:table-row flex flex-col sm:flex-row sm:items-center border-b border-[#C71E64]/10">
+                                <td class="px-4 sm:px-6 py-4 text-sm font-medium text-[#4D2D8C] break-words max-w-xs sm:table-cell">Judul: {{ $task->title }}</td>
+                                <td class="px-4 sm:px-6 py-4 text-sm text-[#4D2D8C]/80 sm:table-cell">Ditugaskan: {{ $task->assignee->name ?? 'N/A' }}</td>
+                                <td class="px-4 sm:px-6 py-4 text-sm text-[#4D2D8C]/80 sm:table-cell">Batas Waktu: {{ \Carbon\Carbon::parse($task->due_date)->format('d M Y') }}</td> <!-- Perbaikan: due_date -->
+                                <td class="px-4 sm:px-6 py-4 sm:table-cell">
+                                    <span class="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full
+                                        @if($task->status === 'pending') bg-[#C71E64]/20 text-[#C71E64]
+                                        @elseif($task->status === 'in-progress') bg-[#FF714B]/20 text-[#FF714B]
+                                        @else bg-[#FF714B]/30 text-[#FF714B]
+                                        @endif
+                                    ">
+                                        @if($task->status === 'pending')
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                        @elseif($task->status === 'in-progress')
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 7l5 5-5 5"></path>
+                                            </svg>
+                                        @else
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        @endif
+                                        {{ ucfirst(str_replace('-', ' ', $task->status)) }}
+                                    </span>
+                                </td>
+                                <td class="px-4 sm:px-6 py-4 text-sm text-[#4D2D8C]/80 sm:table-cell">Dibuat oleh: {{ $task->creator->name ?? 'N/A' }}</td>
+                                <td class="px-4 sm:px-6 py-4 text-right text-sm font-medium space-x-3 sm:table-cell flex justify-end">
+                                    <button wire:click="edit({{ $task->id }})" class="relative bg-[#C71E64]/10 text-[#C71E64] hover:bg-[#C71E64]/20 p-2 rounded-full transition-all duration-300 transform hover:scale-110 group" title="Edit Tugas" aria-label="Edit Tugas">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                        </svg>
+                                        <span class="absolute hidden group-hover:block text-xs bg-[#4D2D8C] text-white py-1 px-3 rounded-full -top-10 left-1/2 transform -translate-x-1/2 transition-all duration-200">Edit</span>
+                                    </button>
+                                    @if($task->status !== 'completed')
+                                        <button wire:click="complete({{ $task->id }})" wire:confirm="Apakah Anda yakin ingin menandai tugas ini sebagai selesai?" class="relative bg-[#FF714B]/10 text-[#FF714B] hover:bg-[#FF714B]/20 p-2 rounded-full transition-all duration-300 transform hover:scale-110 group" title="Tandai Selesai" aria-label="Tandai Selesai">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            <span class="absolute hidden group-hover:block text-xs bg-[#4D2D8C] text-white py-1 px-3 rounded-full -top-10 left-1/2 transform -translate-x-1/2 transition-all duration-200">Selesai</span>
+                                        </button>
+                                    @endif
+                                    <button wire:click="delete({{ $task->id }})" wire:confirm="Apakah Anda yakin ingin menghapus tugas ini?" class="relative bg-[#C71E64]/10 text-[#C71E64] hover:bg-[#C71E64]/20 p-2 rounded-full transition-all duration-300 transform hover:scale-110 group" title="Hapus Tugas" aria-label="Hapus Tugas">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        <span class="absolute hidden group-hover:block text-xs bg-[#4D2D8C] text-white py-1 px-3 rounded-full -top-10 left-1/2 transform -translate-x-1/2 transition-all duration-200">Hapus</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+    <style>
+    @keyframes fade-in {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fade-in 0.5s ease-out;
+    }
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+    .animate-pulse {
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+</style>
 </div>
+
