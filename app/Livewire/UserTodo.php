@@ -5,14 +5,14 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Todo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class UserTodo extends Component
 {
     public $todos;
 
     /**
-     * Metode mount() dijalankan saat komponen diinisialisasi.
-     * Kita akan mengambil semua tugas untuk user yang sedang login.
+     * Inisialisasi komponen, load daftar todo
      */
     public function mount()
     {
@@ -20,7 +20,7 @@ class UserTodo extends Component
     }
 
     /**
-     * Memuat daftar tugas untuk user yang sedang login.
+     * Ambil daftar todo untuk user login
      */
     public function loadTodos()
     {
@@ -31,18 +31,61 @@ class UserTodo extends Component
     }
 
     /**
-     * Mengupdate status tugas.
-     * @param int $todoId
-     * @param string $newStatus
+     * Tandai todo sebagai selesai
      */
-    public function updateTodoStatus($todoId, $newStatus)
+    public function complete($todoId)
     {
         $todo = Todo::find($todoId);
-
         if ($todo && $todo->assigned_to === Auth::id()) {
-            $todo->status = $newStatus;
-            $todo->save();
-            $this->loadTodos(); // Muat ulang daftar tugas untuk memperbarui tampilan
+            $todo->update(['status' => 'done']);
+            $this->loadTodos();
+            session()->flash('message', 'Tugas berhasil ditandai selesai.');
+        } else {
+            session()->flash('error', 'Tugas tidak ditemukan atau Anda tidak memiliki izin.');
+        }
+    }
+
+    /**
+     * Tandai todo sebagai pending lagi
+     */
+    public function reopen($todoId)
+    {
+        $todo = Todo::find($todoId);
+        if ($todo && $todo->assigned_to === Auth::id()) {
+            $todo->update(['status' => 'pending']);
+            $this->loadTodos();
+            session()->flash('message', 'Tugas berhasil dibuka kembali.');
+        } else {
+            session()->flash('error', 'Tugas tidak ditemukan atau Anda tidak memiliki izin.');
+        }
+    }
+
+    /**
+     * Metode untuk menghapus todo
+     */
+    public function delete($todoId)
+    {
+        $todo = Todo::find($todoId);
+        if ($todo && ($todo->assigned_to === Auth::id() || $todo->created_by === Auth::id())) {
+            $todo->delete();
+            $this->loadTodos();
+            session()->flash('message', 'Tugas berhasil dihapus.');
+        } else {
+            session()->flash('error', 'Tugas tidak ditemukan atau Anda tidak memiliki izin.');
+        }
+    }
+
+    /**
+     * Metode untuk mengedit todo (contoh redirect)
+     */
+    public function edit($todoId)
+    {
+        $todo = Todo::find($todoId);
+        if ($todo && ($todo->assigned_to === Auth::id() || $todo->created_by === Auth::id())) {
+            // Contoh: redirect ke halaman edit
+            return redirect()->route('todos.edit', $todoId);
+        } else {
+            session()->flash('error', 'Tugas tidak ditemukan atau Anda tidak memiliki izin untuk mengedit.');
         }
     }
 

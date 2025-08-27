@@ -13,6 +13,8 @@ Route::get('/', function () {
 });
 
 // Rute untuk dashboard, hanya bisa diakses setelah login
+
+
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth'])->name('dashboard');
@@ -33,9 +35,18 @@ Route::get('/task', function () {
     return view('task');
 })->middleware(['auth'])->name('task');
 
-Route::view('profile', 'profile')
-    ->middleware(['auth'])
-    ->name('profile');
+Route::get('/project', function () {
+    return view('project');
+})->middleware(['auth'])->name('project');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+});
+
+
 Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 // Rute untuk login
 Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');

@@ -1,5 +1,4 @@
 <div class="max-w-4xl mx-auto">
-    <!-- Daftar Tugas -->
     <div class="bg-gradient-to-br from-[#F2F2F2] to-[#C71E64]/5 p-6 sm:p-8 rounded-3xl shadow-2xl mb-8 border border-[#C71E64]/20 transition-all duration-500 hover:shadow-3xl">
         <h2 class="text-3xl font-extrabold mb-8 text-[#4D2D8C] tracking-tight animate-fade-in">Daftar Tugas</h2>
         
@@ -42,9 +41,9 @@
                     <tbody class="bg-[#F2F2F2] divide-y divide-[#C71E64]/20">
                         @foreach ($todos as $task)
                             <tr wire:key="{{ $task->id }}" class="hover:bg-[#C71E64]/5 transition-all duration-300 transform hover:scale-[1.01] sm:table-row flex flex-col sm:flex-row sm:items-center border-b border-[#C71E64]/10">
-                                <td class="px-4 sm:px-6 py-4 text-sm font-medium text-[#4D2D8C] break-words max-w-xs sm:table-cell">Judul: {{ $task->title }}</td>
+                                <td class="px-4 sm:px-6 py-4 text-sm font-medium text-[#4D2D8C] break-words max-w-xs sm:table-cell">{{ $task->task }}</td>
                                 <td class="px-4 sm:px-6 py-4 text-sm text-[#4D2D8C]/80 sm:table-cell">Ditugaskan: {{ $task->assignee->name ?? 'N/A' }}</td>
-                                <td class="px-4 sm:px-6 py-4 text-sm text-[#4D2D8C]/80 sm:table-cell">Batas Waktu: {{ \Carbon\Carbon::parse($task->due_date)->format('d M Y') }}</td> <!-- Perbaikan: due_date -->
+                                <td class="px-4 sm:px-6 py-4 text-sm text-[#4D2D8C]/80 sm:table-cell">Batas Waktu: {{ \Carbon\Carbon::parse($task->due_date)->format('d M Y') }}</td>
                                 <td class="px-4 sm:px-6 py-4 sm:table-cell">
                                     <span class="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full
                                         @if($task->status === 'pending') bg-[#C71E64]/20 text-[#C71E64]
@@ -76,12 +75,19 @@
                                         </svg>
                                         <span class="absolute hidden group-hover:block text-xs bg-[#4D2D8C] text-white py-1 px-3 rounded-full -top-10 left-1/2 transform -translate-x-1/2 transition-all duration-200">Edit</span>
                                     </button>
-                                    @if($task->status !== 'completed')
+                                    @if($task->status !== 'done')
                                         <button wire:click="complete({{ $task->id }})" wire:confirm="Apakah Anda yakin ingin menandai tugas ini sebagai selesai?" class="relative bg-[#FF714B]/10 text-[#FF714B] hover:bg-[#FF714B]/20 p-2 rounded-full transition-all duration-300 transform hover:scale-110 group" title="Tandai Selesai" aria-label="Tandai Selesai">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                             </svg>
                                             <span class="absolute hidden group-hover:block text-xs bg-[#4D2D8C] text-white py-1 px-3 rounded-full -top-10 left-1/2 transform -translate-x-1/2 transition-all duration-200">Selesai</span>
+                                        </button>
+                                    @else
+                                        <button wire:click="reopen({{ $task->id }})" wire:confirm="Apakah Anda yakin ingin membuka kembali tugas ini?" class="relative bg-[#4D2D8C]/10 text-[#4D2D8C] hover:bg-[#4D2D8C]/20 p-2 rounded-full transition-all duration-300 transform hover:scale-110 group" title="Buka Kembali" aria-label="Buka Kembali">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                                            </svg>
+                                            <span class="absolute hidden group-hover:block text-xs bg-[#4D2D8C] text-white py-1 px-3 rounded-full -top-10 left-1/2 transform -translate-x-1/2 transition-all duration-200">Buka Kembali</span>
                                         </button>
                                     @endif
                                     <button wire:click="delete({{ $task->id }})" wire:confirm="Apakah Anda yakin ingin menghapus tugas ini?" class="relative bg-[#C71E64]/10 text-[#C71E64] hover:bg-[#C71E64]/20 p-2 rounded-full transition-all duration-300 transform hover:scale-110 group" title="Hapus Tugas" aria-label="Hapus Tugas">
@@ -113,6 +119,5 @@
     .animate-pulse {
         animation: pulse 1.5s ease-in-out infinite;
     }
-</style>
+    </style>
 </div>
-

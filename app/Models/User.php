@@ -118,4 +118,14 @@ class User extends Authenticatable
     {
         return static::where('role', $role);
     }
+
+    /**
+     * Get projects associated with the user
+     */
+
+public function projects()
+{
+    return $this->belongsToMany(Project::class, 'project_user', 'user_id', 'project_id');
+}
+
 }

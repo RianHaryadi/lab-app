@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Project;
 
 class TaskAssignment extends Model
 {
@@ -27,5 +28,9 @@ class TaskAssignment extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
     }
 }

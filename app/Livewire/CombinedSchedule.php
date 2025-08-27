@@ -32,6 +32,7 @@ class CombinedSchedule extends Component
     public $showExchangeRequests = false;
     public $showPublicExchanges = false;
     public $showBackupRequests = false;
+    public $selectedScheduleId = null;
 
     protected $rules = [
         'sickReason' => 'required|string|min:10|max:500',
@@ -229,8 +230,15 @@ class CombinedSchedule extends Component
         $this->resetPage();
     }
 
-    public function showSickLeaveModal($scheduleId): void
+    public function showSickLeaveModal($scheduleId = null): void
     {
+        $scheduleId = $scheduleId ?? $this->selectedScheduleId;
+        
+        if (!$scheduleId) {
+            session()->flash('error', 'Schedule ID is required.');
+            return;
+        }
+        
         $schedule = Schedule::find($scheduleId);
 
         if (!$schedule || ($schedule->created_by !== Auth::id() && $schedule->user_id !== Auth::id())) {
@@ -245,6 +253,12 @@ class CombinedSchedule extends Component
         
         $this->sickScheduleId = $scheduleId;
         $this->showSickLeaveModal = true;
+    }
+
+    public function selectScheduleAndShowSickModal($scheduleId): void
+    {
+        $this->selectedScheduleId = $scheduleId;
+        $this->showSickLeaveModal($scheduleId);
     }
 
     public function submitSickLeave(): void
@@ -275,7 +289,7 @@ class CombinedSchedule extends Component
                 ->get();
 
             foreach ($teamMembers as $member) {
-                $member->notify(new SickBackupNotification($sickRequest));
+                $member->notify(new SickBackupNotification($sickRequest, 'request'));
             }
 
             session()->flash('message', 'Permintaan cuti sakit berhasil dikirim. Notifikasi cadangan telah dikirim ke anggota tim.');
@@ -317,7 +331,7 @@ class CombinedSchedule extends Component
             ]);
 
             if ($sickUser) {
-                $sickUser->notify(new SickBackupNotification($sickRequest));
+                $sickUser->notify(new SickBackupNotification($backupRequest, 'approved'));
             }
 
             session()->flash('message', 'Penugasan cadangan diterima. Pengguna yang sakit telah diberi tahu.');

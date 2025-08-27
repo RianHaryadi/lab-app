@@ -30,6 +30,15 @@
                     class="py-4 px-1 border-b-2 font-medium text-sm {{ !$showExchangeRequests && !$showPublicExchanges && !$showBackupRequests ? 'border-[#C71E64] text-[#C71E64]' : 'border-transparent text-[#4D2D8C]/70 hover:text-[#4D2D8C] hover:border-[#C71E64]/50' }}">
                     My Schedules
                 </button>
+
+                <button 
+                    wire:click="toggleBackupRequests"
+                    class="py-4 px-1 border-b-2 font-medium text-sm relative {{ $showBackupRequests ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    Backup Needed
+                    @if($backupRequestsCount > 0)
+                        <span class="bg-orange-500 text-white text-xs rounded-full px-2 py-1 ml-2">{{ $backupRequestsCount }}</span>
+                    @endif
+                </button>
                 
                 <button 
                     wire:click="toggleExchangeRequests"
@@ -144,15 +153,8 @@
                                                 Direct Exchange
                                             </button>
                                             
-                                            <!--for future use-->
-                                            <!-- <button 
-                                                wire:click="initiatePublicSwap({{ $item['id'] }})"
-                                                class="bg-[#FF714B] hover:bg-[#FF714B]/80 text-white font-bold py-2 px-4 rounded text-sm">
-                                                Post for Exchange
-                                            </button> -->
-                                            
                                             <button 
-                                                wire:click="showSickLeaveModal({{ $item['id'] }})" 
+                                                wire:click="selectScheduleAndShowSickModal({{ $item['id'] }})" 
                                                 class="bg-[#C71E64] hover:bg-[#C71E64]/80 text-white font-bold py-2 px-4 rounded text-sm">
                                                 Report Sick
                                             </button>

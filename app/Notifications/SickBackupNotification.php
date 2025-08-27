@@ -3,8 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\SickBackupRequest;
 
@@ -23,66 +21,20 @@ class SickBackupNotification extends Notification
 
     public function via($notifiable)
     {
-        return ['mail', 'database'];
-    }
-
-    public function toMail($notifiable)
-    {
-        $mailMessage = new MailMessage();
-
-        switch ($this->type) {
-            case 'request':
-                return $mailMessage
-                    ->subject('Backup Coverage Needed - Team Member Sick')
-                    ->line('A team member needs backup coverage due to illness.')
-                    ->line('Team Member: ' . $this->backupRequest->sickUser->name)
-                    ->line('Schedule: ' . $this->backupRequest->originalSchedule->title)
-                    ->line('Date: ' . $this->backupRequest->date->format('M d, Y'))
-                    ->line('Reason: ' . $this->backupRequest->reason)
-                    ->action('Offer Backup', url('/dashboard'))
-                    ->line('Your help would be greatly appreciated!');
-
-            case 'accepted':
-                return $mailMessage
-                    ->subject('Backup Coverage Confirmed')
-                    ->line('Great news! Someone has offered to cover your shift.')
-                    ->line('Backup by: ' . $this->backupRequest->backupUser->name)
-                    ->line('Schedule: ' . $this->backupRequest->originalSchedule->title)
-                    ->line('Date: ' . $this->backupRequest->date->format('M d, Y'))
-                    ->action('View Details', url('/dashboard'))
-                    ->line('Get well soon!');
-
-            default:
-                return $mailMessage
-                    ->subject('Sick Leave Update')
-                    ->line('There has been an update to a sick leave request.')
-                    ->action('View Dashboard', url('/dashboard'));
-        }
+        return ['database']; // Adjust based on your notification channels (e.g., 'mail', 'database')
     }
 
     public function toArray($notifiable)
     {
-        return [
-            'type' => $this->type,
-            'backup_request_id' => $this->backupRequest->id,
-            'sick_user' => $this->backupRequest->sickUser->name,
-            'schedule_title' => $this->backupRequest->originalSchedule->title,
-            'date' => $this->backupRequest->date,
-            'reason' => $this->backupRequest->reason,
-            'backup_user' => $this->backupRequest->backupUser ? $this->backupRequest->backupUser->name : null,
-            'message' => $this->getMessageForType()
-        ];
-    }
+        $message = $this->type === 'request'
+            ? 'A team member has requested sick leave and needs backup for their schedule.'
+            : 'Your sick leave backup request has been approved.';
 
-    private function getMessageForType()
-    {
-        switch ($this->type) {
-            case 'request':
-                return 'Backup coverage needed';
-            case 'accepted':
-                return 'Backup coverage confirmed';
-            default:
-                return 'Sick leave update';
-        }
+        return [
+            'message' => $message,
+            'schedule_title' => optional($this->backupRequest->originalSchedule)->title ?? 'Unknown Schedule',
+            'schedule_date' => $this->backupRequest->date ?? now()->toDateString(), // Ensure schedule_date is included
+            'type' => $this->type,
+        ];
     }
 }

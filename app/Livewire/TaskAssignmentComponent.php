@@ -5,20 +5,21 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\TaskAssignment;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth; // <-- Make sure to include this line
 
 class TaskAssignmentComponent extends Component
 {
-    public $taskId, $title, $description, $assigned_to, $deadline, $status;
+    public $taskId, $title, $description, $assigned_to, $deadline, $status = 'pending';
     public $isEditing = false;
     public $users;
     public $tasks;
 
     protected $rules = [
-        'title' => 'required|string|max:255',
+        'title'       => 'required|string|max:255',
         'description' => 'nullable|string',
         'assigned_to' => 'required|exists:users,id',
-        'deadline' => 'required|date',
-        'status' => 'required|in:pending,in-progress,completed',
+        'deadline'    => 'required|date',
+        'status'      => 'required|in:pending,in-progress,done',
     ];
 
     public function mount()
@@ -29,24 +30,28 @@ class TaskAssignmentComponent extends Component
 
     public function loadTasks()
     {
-        $this->tasks = TaskAssignment::with(['assignee', 'creator'])->orderBy('deadline', 'asc')->get();
+        $this->tasks = TaskAssignment::with(['assignee', 'creator'])
+            ->where('assigned_to', Auth::id()) // <-- This is the key change
+            ->orderBy('deadline', 'asc')
+            ->get();
     }
 
     private function resetForm()
     {
-        $this->taskId = null;
-        $this->title = '';
+        $this->taskId      = null;
+        $this->title       = '';
         $this->description = '';
         $this->assigned_to = '';
-        $this->deadline = '';
-        $this->status = 'pending';
-        $this->isEditing = false;
+        $this->deadline    = '';
+        $this->status      = 'pending';
+        $this->isEditing   = false;
         $this->resetValidation();
     }
 
     public function create()
     {
         $this->resetForm();
+        $this->isEditing = false;
     }
 
     public function store()
@@ -54,12 +59,12 @@ class TaskAssignmentComponent extends Component
         $this->validate();
 
         TaskAssignment::create([
-            'title' => $this->title,
+            'title'       => $this->title,
             'description' => $this->description,
             'assigned_to' => $this->assigned_to,
-            'deadline' => $this->deadline,
-            'status' => $this->status,
-            'created_by' => auth()->id(),
+            'deadline'    => $this->deadline,
+            'status'      => $this->status,
+            'created_by'  => auth()->id(),
         ]);
 
         $this->resetForm();
@@ -70,13 +75,15 @@ class TaskAssignmentComponent extends Component
     public function edit($id)
     {
         $task = TaskAssignment::findOrFail($id);
-        $this->taskId = $task->id;
-        $this->title = $task->title;
+
+        $this->taskId      = $task->id;
+        $this->title       = $task->title;
         $this->description = $task->description;
         $this->assigned_to = $task->assigned_to;
-        $this->deadline = $task->deadline->format('Y-m-d');
-        $this->status = $task->status;
-        $this->isEditing = true;
+        // aman kalau deadline null
+        $this->deadline    = $task->deadline ? $task->deadline->format('Y-m-d') : '';
+        $this->status      = $task->status;
+        $this->isEditing   = true;
     }
 
     public function update()
@@ -84,12 +91,13 @@ class TaskAssignmentComponent extends Component
         $this->validate();
 
         $task = TaskAssignment::findOrFail($this->taskId);
+
         $task->update([
-            'title' => $this->title,
+            'title'       => $this->title,
             'description' => $this->description,
             'assigned_to' => $this->assigned_to,
-            'deadline' => $this->deadline,
-            'status' => $this->status,
+            'deadline'    => $this->deadline,
+            'status'      => $this->status,
         ]);
 
         $this->resetForm();
@@ -107,6 +115,8 @@ class TaskAssignmentComponent extends Component
     public function complete($id)
     {
         $task = TaskAssignment::findOrFail($id);
+
+        // ubah ke 'done' agar konsisten dengan validasi & tampilan
         $task->update([
             'status' => 'done',
         ]);
